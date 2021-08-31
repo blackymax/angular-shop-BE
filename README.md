@@ -1,1 +1,1 @@
-# angular-shop-BE
+# rs-shop-json-server
