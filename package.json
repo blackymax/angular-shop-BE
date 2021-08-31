@@ -12,5 +12,8 @@
     "express": "^4.17.1",
     "json-server": "^0.16.3",
     "lodash": "^4.17.21"
+  },
+  "engines": {
+    "node": "v14.17.0"
   }
 }
