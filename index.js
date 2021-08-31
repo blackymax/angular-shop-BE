@@ -6,6 +6,7 @@ const walk = require('./utils/walk');
 const cors = require('./utils/cors');
 
 let ang;
+const port = process.env.PORT || 3004;
 
 walk('./services', function (err, results) {
 	if (err) {
@@ -23,8 +24,8 @@ walk('./services', function (err, results) {
 		server.use(ang.middleware);
 		server.use(ang.db);
 		
-		server.listen(3004, function () {
-			console.log('JSON Server is running on 3004');
+		server.listen(port, function () {
+			console.log(`JSON Server is running on ${port}`);
 		});
 	}
 });
