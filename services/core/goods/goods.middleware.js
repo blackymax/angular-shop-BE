@@ -54,7 +54,61 @@ function getAllGoods(server, req) {
     .filter(Boolean);
 }
 
+/**
+  * @swagger
+  *
+  * tags:
+  *   name: goods
+  *   description: API for managing goods
+  *
+  * components:
+  *   schemas:
+  *     ShopItem:
+  *       type: object
+  *       properties:
+  *         id:
+  *           type: string
+  *         name:
+  *           type: string
+  *         imageUrls:
+  *           type: array
+  *           items:
+  *             type: string
+  *         rating:
+  *           type: number
+  *         availableAmount:
+  *           type: number
+  *         price:
+  *           type: number
+  *         description:
+  *           type: string
+  *         isInCart:
+  *           type: boolean
+  *         isFavorite:
+  *           type: boolean
+*/
 module.exports = (server) => {
+  /**
+    * @swagger
+    * /goods/search?text=searchQuery:
+    *   get:
+    *     tags: [goods]
+    *     description: Searches for the goods
+    *     parameters:
+    *       - in: query
+    *         name: text
+    *         required: true
+    *         schema:
+    *           type: string
+    *     responses:
+    *       200:
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: array
+    *               items:
+    *                 $ref: '#/components/schemas/ShopItem'
+  */  
   router.get('/goods/search', (req, res) => {
     let urlParts = url.parse(req.originalUrl, true),
       query = urlParts.query;
@@ -70,7 +124,37 @@ module.exports = (server) => {
         .slice(0, 10)
     );
   });
-
+  /**
+    * @swagger
+    * /goods/category/{categoryId}?start=startPosition&count=countOfItemsPerPage:
+    *   get:
+    *     tags: [goods]
+    *     description: Get goods by category
+    *     parameters:
+    *       - in: path
+    *         name: categoryId
+    *         required: true
+    *         schema:
+    *           type: string
+    *       - in: query
+    *         name: start
+    *         schema:
+    *           type: number
+    *       - in: query
+    *         name: count
+    *         schema:
+    *           type: number
+    *     responses:
+    *       200:
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: array
+    *               items:
+    *                 $ref: '#/components/schemas/ShopItem'
+    *       404:
+    *         description: category not found
+  */  
   router.get('/goods/category/:category', (req, res) => {
     let urlParts = url.parse(req.originalUrl, true),
       query = urlParts.query,
@@ -80,7 +164,7 @@ module.exports = (server) => {
       goods = addListAttributes(
         req,
         server,
-        Object.keys(server.db.getState().goods[category]).reduce(
+        Object.keys(server.db.getState().goods[category] || {}).reduce(
           (acc, subCategory) => {
             return [
               ...acc,
@@ -98,7 +182,42 @@ module.exports = (server) => {
 
     res.json(goods);
   });
-
+  /**
+    * @swagger
+    * /goods/category/{categoryId}/{subCategoryId}?start=startPosition&count=countOfItemsPerPage:
+    *   get:
+    *     tags: [goods]
+    *     description: Get goods by subcategory
+    *     parameters:
+    *       - in: path
+    *         name: categoryId
+    *         required: true
+    *         schema:
+    *           type: string
+   *       - in: path
+    *         name: subCategoryId
+    *         required: true
+    *         schema:
+    *           type: string
+    *       - in: query
+    *         name: start
+    *         schema:
+    *           type: number
+    *       - in: query
+    *         name: count
+    *         schema:
+    *           type: number
+    *     responses:
+    *       200:
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: array
+    *               items:
+    *                 $ref: '#/components/schemas/ShopItem'
+    *       404:
+    *         description: category or subcategory not found
+  */  
   router.get('/goods/category/:category/:subCategory', (req, res) => {
     let urlParts = url.parse(req.originalUrl, true),
       query = urlParts.query,
@@ -120,6 +239,27 @@ module.exports = (server) => {
     res.json(goods);
   });
 
+    /**
+    * @swagger
+    * /goods/item/{itemId}:
+    *   get:
+    *     tags: [goods]
+    *     description: Gets shop item by id
+    *     parameters:
+    *       - in: path
+    *         name: itemId
+    *         required: true
+    *         schema:
+    *           type: string
+    *     responses:
+    *       200:
+    *         content:
+    *           application/json:
+    *             schema:
+    *               $ref: '#/components/schemas/ShopItem'
+    *       404:
+    *         description: item not found
+  */  
   router.get('/goods/item/:id', (req, res) => {
     const allGoods = getAllGoods(server, req);
     const goodsItem = allGoods.find((item) => item.id === req.params.id);

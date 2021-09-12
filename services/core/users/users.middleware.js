@@ -14,9 +14,9 @@ function makeToken(length = 24) {
 }
 
 function getUserByToken(req, res, server) {
-  const authorizationHeader = req.header('Authorization').split(' ');
-  const authorizationMethod = authorizationHeader[0];
-  const reqToken = authorizationHeader[1];
+  const authorizationHeader = req.header('Authorization') && req.header('Authorization').split(' ');
+  const authorizationMethod = authorizationHeader && authorizationHeader[0];
+  const reqToken = authorizationHeader && authorizationHeader[1];
 
   if (!reqToken || authorizationMethod !== 'Bearer') {
     return res.status(401).send('Unauthorized');
@@ -53,9 +53,9 @@ function handleAddingToLists(server, listName, isAdding, req, res) {
           : user
       ),
     });
-    res.send(200);
+    return res.status(200);
   } else {
-    res.status(400);
+    return res.status(400);
   }
 }
 
@@ -76,13 +76,127 @@ function getAllGoods(server) {
 function reduceAvailableCount(server, items) {
   const allGoods = getAllGoods(server);
 
-  items.forEach(purchasedItem => {
-    const item = allGoods.find(it => it.id === purchasedItem.id);
+  items.forEach((purchasedItem) => {
+    const item = allGoods.find((it) => it.id === purchasedItem.id);
     item.availableAmount -= purchasedItem.amount;
-  })
+  });
 }
-
+  /**
+    * @swagger
+    *
+    * tags:
+    *   name: users
+    *   description: API for managing users
+    *
+    * components:
+    *   securitySchemes:
+    *     BearerAuth:
+    *       type: http
+    *       scheme: bearer
+    *   schemas:
+    *     UserLogin:
+    *       type: object
+    *       properties:
+    *         login:
+    *           type: string
+    *           description: user login
+    *         password:
+    *           type: string
+    *           description: user password
+    *     UserRegister:
+    *       type: object
+    *       properties:
+    *         firstName:
+    *           type: string
+    *         lastName:
+    *           type: string
+    *         login:
+    *           type: string
+    *         password:
+    *           type: string
+    *     TokenResponse:
+    *       type: object
+    *       properties:
+    *         token:
+    *           type: string
+    *           description: user token
+    *     OrderItem:
+    *       type: object
+    *       properties:
+    *         id:
+    *           type: string
+    *         amount:
+    *           type: number
+    *     UserOrderRequest:
+    *       type: object
+    *       properties:
+    *         items:
+    *           type: array
+    *           items:
+    *             $ref: '#/components/schemas/OrderItem'
+    *         details:
+    *           type: object
+    *           properties:
+    *             name:
+    *               type: string
+    *             address:
+    *               type: string
+    *             phone:
+    *               type: string
+    *             timeToDeliver:
+    *               type: string
+    *             comment:
+    *               type: string
+    *     UserOrder:
+    *       allOf:
+    *         - $ref: '#/components/schemas/UserOrderRequest'
+    *         - type: object
+    *           properties:
+    *             id:
+    *               type: string 
+    *     UserInfo:
+    *       type: object
+    *       properties:
+    *         firstName:
+    *           type: string
+    *         lastName:
+    *           type: string
+    *         cart:
+    *           type: array
+    *           items:
+    *             type: string
+    *         favorites:
+    *           type: array
+    *           items:
+    *             type: string
+    *         orders:
+    *           type: array
+    *           items:
+    *             $ref: '#/components/schemas/UserOrder'
+  */
 module.exports = (server) => {
+  /**
+    * @swagger
+    * /users/login:
+    *   post:
+    *     tags: [users]
+    *     description: Performs user login
+    *     requestBody:
+    *       required: true
+    *       content:
+    *         application/json:
+    *           schema:
+    *             $ref: '#/components/schemas/UserLogin'
+    *     responses:
+    *       200:
+    *         description: user logged in successfully
+    *         content:
+    *           application/json:
+    *             schema:
+    *               $ref: '#/components/schemas/TokenResponse'
+    *       401:
+    *         description: wrong credentials entered
+  */
   router.post('/users/login', (req, res) => {
     const { body } = req;
 
@@ -102,6 +216,23 @@ module.exports = (server) => {
     }
   });
 
+  /**
+    * @swagger
+    * /users/userInfo:
+    *   get:
+    *     tags: [users]
+    *     description: Gets current user info
+    *     security:
+    *       - BearerAuth: []
+    *     responses:
+    *       200:
+    *         content:
+    *           application/json:
+    *             schema:
+    *               $ref: '#/components/schemas/UserInfo'
+    *       401:
+    *         description: user token is missing
+  */
   router.get('/users/userInfo', (req, res) => {
     const matchedUser = getUserByToken(req, res, server);
 
@@ -114,6 +245,25 @@ module.exports = (server) => {
     res.json(user);
   });
 
+  /**
+    * @swagger
+    * /users/register:
+    *   post:
+    *     tags: [users]
+    *     description: Register new user
+    *     requestBody:
+    *       required: true
+    *       content:
+    *         application/json:
+    *           schema:
+    *             $ref: '#/components/schemas/UserRegister'
+    *     responses:
+    *       200:
+    *         content:
+    *           application/json:
+    *             schema:
+    *               $ref: '#/components/schemas/TokenResponse'
+  */
   router.post('/users/register', (req, res) => {
     const token = makeToken();
 
@@ -131,22 +281,132 @@ module.exports = (server) => {
     res.json({ token });
   });
 
+  /**
+    * @swagger
+    * /users/favorites:
+    *   post:
+    *     tags: [users]
+    *     description: Adds item to the favorites list
+    *     security:
+    *       - BearerAuth: []
+    *     requestBody:
+    *       required: true
+    *       content:
+    *         application/json:
+    *           schema:
+    *             type: object
+    *             properties:
+    *               id:
+    *                 type: string
+    *     responses:
+    *       200:
+    *         description: item added to favorites
+    *       401:
+    *         description: user token is missing
+  */
   router.post('/users/favorites', (req, res) => {
     handleAddingToLists(server, 'favorites', true, req, res);
+    res.end();
   });
 
+  /**
+    * @swagger
+    * /users/favorites?id=itemId:
+    *   delete:
+    *     tags: [users]
+    *     description: Removes item from the favorites list
+    *     security:
+    *       - BearerAuth: []
+    *     parameters:
+    *       - in: query
+    *         name: id
+    *         required: true
+    *         schema:
+    *           type: number
+    *     responses:
+    *       200:
+    *         description: item removed from favorites
+    *       401:
+    *         description: user token is missing
+  */
   router.delete('/users/favorites', (req, res) => {
     handleAddingToLists(server, 'favorites', false, req, res);
+    res.end();
   });
 
+  /**
+    * @swagger
+    * /users/cart:
+    *   post:
+    *     tags: [users]
+    *     description: Adds item to the user cart
+    *     security:
+    *       - BearerAuth: []
+    *     requestBody:
+    *       required: true
+    *       content:
+    *         application/json:
+    *           schema:
+    *             type: object
+    *             properties:
+    *               id:
+    *                 type: string
+    *     responses:
+    *       200:
+    *         description: item added to the user cart
+    *       401:
+    *         description: user token is missing
+  */  
   router.post('/users/cart', (req, res) => {
     handleAddingToLists(server, 'cart', true, req, res);
+    res.end();
   });
 
+  /**
+    * @swagger
+    * /users/cart?id=itemId:
+    *   delete:
+    *     tags: [users]
+    *     description: Removes item from the user cart
+    *     security:
+    *       - BearerAuth: []
+    *     parameters:
+    *       - in: query
+    *         name: id
+    *         required: true
+    *         schema:
+    *           type: number
+    *     responses:
+    *       200:
+    *         description: item removed from the user cart
+    *       401:
+    *         description: user token is missing
+  */
   router.delete('/users/cart', (req, res) => {
     handleAddingToLists(server, 'cart', false, req, res);
+    res.end();
   });
 
+  /**
+    * @swagger
+    * /users/order:
+    *   post:
+    *     tags: [users]
+    *     description: Submits user order
+    *     security:
+    *       - BearerAuth: []
+    *     requestBody:
+    *       required: true
+    *       content:
+    *         application/json:
+    *           schema:
+    *             $ref: '#/components/schemas/UserOrderRequest'
+    *     responses:
+    *       200:
+    *         description: order submitted
+    *       401:
+    *         description: user token is missing
+  */  
   router.post('/users/order', (req, res) => {
     const { body } = req;
     const matchedUser = getUserByToken(req, res, server);
@@ -179,9 +439,29 @@ module.exports = (server) => {
     });
 
     reduceAvailableCount(server, body.items);
-    res.send(200);
+    return res.sendStatus(200);
   });
 
+  /**
+    * @swagger
+    * /users/order:
+    *   put:
+    *     tags: [users]
+    *     description: Edits user order
+    *     security:
+    *       - BearerAuth: []
+    *     requestBody:
+    *       required: true
+    *       content:
+    *         application/json:
+    *           schema:
+    *             $ref: '#/components/schemas/UserOrder'
+    *     responses:
+    *       200:
+    *         description: order edited
+    *       401:
+    *         description: user token is missing
+  */  
   router.put('/users/order', (req, res) => {
     const { body } = req;
     const matchedUser = getUserByToken(req, res, server);
@@ -206,11 +486,31 @@ module.exports = (server) => {
       ),
     });
 
-    res.send(200);
+    return res.sendStatus(200);
   });
 
+  /**
+    * @swagger
+    * /users/order?id=orderId:
+    *   delete:
+    *     tags: [users]
+    *     description: Removes user order
+    *     security:
+    *       - BearerAuth: []
+    *     parameters:
+    *       - in: query
+    *         name: id
+    *         required: true
+    *         schema:
+    *           type: number
+    *     responses:
+    *       200:
+    *         description: order removed
+    *       401:
+    *         description: user token is missing
+  */
   router.delete('/users/order', (req, res) => {
-    const { body } = req;
+    const { query } = url.parse(req.originalUrl, true);
     const matchedUser = getUserByToken(req, res, server);
 
     if (!matchedUser) {
@@ -223,13 +523,13 @@ module.exports = (server) => {
         user.token === matchedUser.token
           ? {
               ...user,
-              orders: user.orders.filter((order) => order.id !== body.id),
+              orders: user.orders.filter((order) => order.id !== query.id),
             }
           : user
       ),
     });
 
-    res.send(204);
+    res.status(204);
   });
 
   return router;
